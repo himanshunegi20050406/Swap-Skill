@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+<!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
+
+
+<url>
+  <loc>https://swapskill.web.app/</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>1.00</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/request.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/login.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/signup.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/aboutus.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/contactus.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/privacypolicy.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/termsconditons.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/admin.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/dashboard.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/chat.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/index.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.64</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/editprofile.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.51</priority>
+</url>
+<url>
+  <loc>https://swapskill.web.app/userprofile.html</loc>
+  <lastmod>2026-05-15T16:39:25+00:00</lastmod>
+  <priority>0.51</priority>
+</url>
+
+
+</urlset>
