@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://swapskill.web.app/sitemap.xml
-
