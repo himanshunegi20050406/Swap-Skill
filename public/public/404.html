@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page Not Found — SwapSkill</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --bg: #0f172a;
+      --text: #f8fafc;
+      --glass: rgba(30, 41, 59, 0.6);
+      --border: rgba(255, 255, 255, 0.1);
+    }
+
+    body {
+      display: flex; 
+      justify-content: center; 
+      align-items: center;
+      min-height: 100vh; 
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top right, #1e293b, #0f172a);
+      color: var(--text);
+      overflow: hidden; 
+    }
+
+    .container {
+      background: var(--glass);
+      backdrop-filter: blur(12px);
+      border: 2px solid transparent;
+      border-radius: 24px;
+      background-clip: padding-box, border-box;
+      background-origin: border-box;
+      background-image: 
+        linear-gradient(var(--glass), var(--glass)), 
+        linear-gradient(90deg, var(--border), #3b82f6, #60a5fa, var(--border));
+      background-size: 300% 100%;
+      padding: 50px 40px;
+      width: 90%; 
+      max-width: 450px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+      animation: containerEntry 0.6s ease-out, borderFlow 4s linear infinite;
+    }
+
+    .error-code {
+      margin: 0;
+      font-size: 90px;
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(90deg, #60a5fa, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    h1 { 
+      margin: 0 0 15px 0; 
+      font-size: 24px; 
+      font-weight: 600;
+      color: #f1f5f9;
+      animation: slideUp 0.6s ease-out 0.2s both;
+    }
+
+    p { 
+      color: #94a3b8; 
+      font-size: 15px; 
+      line-height: 1.6; 
+      margin-bottom: 30px; 
+      animation: slideUp 0.6s ease-out 0.4s both;
+    }
+
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 14px;
+      background: var(--primary);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+      animation: slideUp 0.6s ease-out 0.6s both;
+    }
+
+    .btn:hover { 
+      background: #2563eb; 
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    @keyframes borderFlow {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 300% 0%; }
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    @keyframes containerEntry {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2 class="error-code">404</h2>
+    <h1>Page Not Found</h1>
+    <p>Oops! The page you are looking for doesn't exist, has been moved, or is temporarily unavailable.</p>
+    
+    <a href="index.html" class="btn">Return to Home</a>
+  </div>
+
+  <script>
+    // Initialize the error sound
+    const errorSound = new Audio("https://assets.mixkit.co/active_storage/sfx/946/946-preview.mp3");
+    errorSound.volume = 0.5;
+
+    // Attempt to play the sound as soon as the page loads
+    window.addEventListener('load', () => {
+      errorSound.play().catch((error) => {
+        console.log("Browser blocked autoplay. Waiting for user interaction...");
+        
+        // Fallback: If blocked, play it the very first time they click anywhere on the page
+        document.body.addEventListener('click', () => {
+          errorSound.play().catch(e => console.log(e));
+        }, { once: true });
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Live Session — SwapSkill</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.2/dist/nsfwjs.min.js"></script>
+
+<style>
+:root { --primary:#3b82f6; --bg:#0f172a; --text:#f8fafc; --danger:#ef4444; --success:#22c55e; --border: rgba(255, 255, 255, 0.1); }
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,sans-serif}
+body{background:radial-gradient(circle at top right,#1e293b,#0f172a);color:var(--text);height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+
+/* --- TTS Button Styles --- */
+#tts-btn {
+  position: fixed; top: 80px; right: 20px; z-index: 9000;
+  background: var(--primary); color: white; border: 1px solid var(--border);
+  padding: 10px 18px; border-radius: 50px; cursor: pointer;
+  font-weight: 600; font-size: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  transition: all 0.3s ease; backdrop-filter: blur(5px);
+}
+#tts-btn:hover { background: #2563eb; transform: translateY(-2px); }
+#tts-btn.playing { background: var(--success); animation: pulse-green 1.5s infinite; }
+
+/* Header */
+header{height:60px;padding:0 20px;display:flex;align-items:center;justify-content:space-between;background:rgba(15,23,42,0.9);border-bottom:1px solid rgba(255,255,255,0.1);z-index:10; backdrop-filter:blur(10px);}
+header h3{font-size:18px;display:flex;align-items:center;gap:8px}
+.live-dot{width:10px;height:10px;background:var(--danger);border-radius:50%;animation:pulse 2s infinite}
+.end-btn{background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);padding:8px 16px;border-radius:20px;font-weight:600;cursor:pointer;transition:0.2s}
+.end-btn:hover{background:var(--danger);color:#fff}
+
+/* Main Grid */
+.main{flex:1;display:grid;grid-template-columns:1fr 350px;gap:16px;padding:16px;overflow:hidden}
+
+/* Video Area */
+.video-wrapper{position:relative;background:#1e293b;border-radius:20px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center}
+video{width:100%;height:100%;object-fit:cover;background:#000;}
+
+#localVideo{position:absolute;bottom:20px;right:20px;width:150px;height:110px;background:#000;border:2px solid rgba(255,255,255,0.3);border-radius:12px;transform:scaleX(-1);z-index:10;transition:0.3s;object-fit:cover; box-shadow:0 10px 20px rgba(0,0,0,0.5);}
+#statusOverlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.8);padding:10px 20px;border-radius:8px;z-index:5;color:#fff;font-weight:bold; backdrop-filter:blur(5px);}
+
+/* NUDITY WARNING OVERLAY */
+#nsfwWarning { position:absolute; top:30px; left:50%; transform:translateX(-50%); background:rgba(239, 68, 68, 0.95); color:white; padding:12px 24px; border-radius:12px; font-size:16px; font-weight:bold; z-index:9999; text-align: center; display:none; border:2px solid #fff; box-shadow:0 10px 30px rgba(239,68,68,0.5); animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+/* SECURITY BAN OVERLAY */
+#banOverlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(15px); z-index: 99999; display: none; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
+#banOverlay h1 { color: var(--danger); font-size: 32px; margin-bottom: 10px; }
+#banOverlay p { color: #cbd5e1; font-size: 16px; max-width: 400px; line-height: 1.5; }
+
+/* SUBTITLES */
+#subtitles { position:absolute; bottom:95px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.7); color:#fbbf24; padding:8px 16px; border-radius:12px; font-size:15px; z-index:20; text-align: center; display:none; backdrop-filter:blur(4px); max-width: 80%;}
+
+#remoteAvatar{position:absolute;inset:0;background:#1e293b;display:none;flex-direction:column;align-items:center;justify-content:center;color:#64748b;z-index:1}
+#remoteAvatar svg{width:80px;height:80px;fill:currentColor;margin-bottom:12px}
+
+/* Controls */
+.controls{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:10;background:rgba(0,0,0,0.6);padding:10px 20px;border-radius:30px;backdrop-filter:blur(8px)}
+.c-btn{width:48px;height:48px;border-radius:50%;border:none;background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:0.2s}
+.c-btn:hover{background:rgba(255,255,255,0.3);transform:scale(1.1)}
+.c-btn.off{background:var(--danger);color:#fff}
+.c-btn.active-share{background:var(--success);color:#fff}
+
+/* Chat Area */
+.chat-box{background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.1);border-radius:20px;display:flex;flex-direction:column;overflow:hidden; backdrop-filter:blur(10px);}
+.chat-header{padding:14px;background:rgba(0,0,0,0.2);font-size:14px;font-weight:600;color:#94a3b8}
+.messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.messages::-webkit-scrollbar { width: 4px; }
+.messages::-webkit-scrollbar-thumb { background: rgba(59, 130, 246, 0.5); border-radius: 10px; }
+.msg{padding:10px 14px;border-radius:16px;max-width:85%;font-size:14px;word-break:break-word;line-height:1.4; animation: fadeIn 0.3s ease-out forwards;}
+.me{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.them{background:#334155;color:#e2e8f0;align-self:flex-start;border-bottom-left-radius:4px}
+.inputs{padding:12px;display:flex;gap:8px;background:rgba(0,0,0,0.3)}
+.inputs input{flex:1;padding:12px 16px;border-radius:24px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:#fff;outline:none; transition:0.2s;}
+.inputs input:focus{border-color:var(--primary); background:rgba(255,255,255,0.1);}
+.inputs button{background:var(--primary);border:none;width:44px;border-radius:50%;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center; transition:0.2s;}
+.inputs button:hover{background:#2563eb;}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(5px)}
+.modal-box{background:#1e293b; border:1px solid var(--border); padding:24px;border-radius:24px;text-align:center;width:90%;max-width:320px;box-shadow:0 20px 50px rgba(0,0,0,0.5)}
+.stars{font-size:36px;cursor:pointer;margin:20px 0;display:flex;justify-content:center;gap:8px}
+.star{color:#475569;transition:0.2s}
+.star.active{color:#fbbf24;transform:scale(1.1)}
+
+/* --- DYNAMIC TOAST --- */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; background: #0f172a; border: 2px solid var(--border);
+  color: #fff; padding: 12px 20px; border-radius: 12px; font-weight: 500; font-size: 14px;
+  transform: translateY(100px); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 10000;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+.toast-success { border-color: var(--success) !important; color: var(--success) !important; }
+.toast-error { border-color: var(--danger) !important; color: var(--danger) !important; }
+.shake-error { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both !important; }
+
+@keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(239,68,68,0.7)} 70%{box-shadow:0 0 0 8px rgba(239,68,68,0)} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+@keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+@keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(3px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-5px, 0, 0); } 40%, 60% { transform: translate3d(5px, 0, 0); } }
+
+/* Mobile Optimizations */
+@media(max-width:768px){
+  .main{grid-template-columns:1fr;grid-template-rows:1fr 280px;gap:12px;padding:12px}
+  #localVideo{width:90px;height:120px;bottom:90px;right:12px;}
+  .controls{width:95%;justify-content:space-evenly;bottom:12px; padding:8px;}
+  .c-btn{width:42px; height:42px; font-size:18px;}
+  #subtitles{bottom: 70px; width: 90%; font-size: 13px;}
+  #tts-btn { bottom: auto; top: 70px; right: 10px; }
+  #toast { bottom: 20px; right: 50%; transform: translateX(50%) translateY(100px); width: 90%; text-align: center; }
+  #toast.show { transform: translateX(50%) translateY(0); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h3><span class="live-dot"></span> Live Session</h3>
+  <button class="end-btn" id="endBtn">End Session</button>
+</header>
+
+<button id="tts-btn" title="Shortcut: Alt + S">🔊 Read Page</button>
+
+<div class="main">
+  <div class="video-wrapper">
+    <div id="statusOverlay">Connecting to Peer...</div>
+    
+    <div id="nsfwWarning">⚠️ Inappropriate visual content detected! (Strike 1/3)</div>
+
+    <div id="remoteAvatar">
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <div style="margin-top:8px;">Camera Off</div>
+    </div>
+
+    <video id="remoteVideo" autoplay playsinline></video>
+    <video id="localVideo" autoplay playsinline muted></video>
+    
+    <div id="subtitles">🎤 Deepgram AI Starting...</div>
+
+    <div class="controls">
+      <button class="c-btn" id="micBtn" title="Mic">🎤</button>
+      <button class="c-btn" id="camBtn" title="Camera">📷</button>
+      <button class="c-btn" id="shareBtn" title="Share Screen">🖥️</button>
+    </div>
+  </div>
+
+  <div class="chat-box">
+    <div class="chat-header">Session Chat (Moderated)</div>
+    <div class="messages" id="msgs"></div>
+    <div class="inputs">
+      <input id="txt" placeholder="Type a message..." autocomplete="off"/>
+      <button id="send">➤</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="ratingModal">
+  <div class="modal-box">
+    <h3 style="color:white; margin-bottom:10px;">Rate Experience</h3>
+    <p style="color:#94a3b8; font-size:14px;">How was your skill swap session?</p>
+    <div class="stars" id="starContainer">
+      <span class="star" data-v="1">★</span>
+      <span class="star" data-v="2">★</span>
+      <span class="star" data-v="3">★</span>
+      <span class="star" data-v="4">★</span>
+      <span class="star" data-v="5">★</span>
+    </div>
+    <button id="submitBtn" style="width:100%;padding:14px;background:#3b82f6;color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:0.2s;">Submit & End</button>
+  </div>
+</div>
+
+<div id="banOverlay">
+    <div style="font-size: 60px; margin-bottom: 20px;">⛔</div>
+    <h1>SECURITY ALERT</h1>
+    <p id="banReasonText">You have been automatically banned for violating our zero-tolerance policy. Your session has been terminated.</p>
+    <button onclick="window.location.href='dashboard.html'" style="margin-top:30px; padding:12px 24px; background:transparent; border:1px solid #64748b; color:white; border-radius:12px; cursor:pointer;">Return to Dashboard</button>
+</div>
+
+<div id="toast"></div>
+
+<script src="tts.js"></script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
+import { getFirestore, doc, collection, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, serverTimestamp, getDocs, where } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey:"AIzaSyDwrZVBhR0VSbkbiktvkOsW3iSYJ6PFJ9A",
+  authDomain:"swapskill.web.app",
+  projectId:"swapskill-6e456"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// --- AUDIO CUES & TOASTS ---
+const successSound = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
+const errorSound = new Audio("https://assets.mixkit.co/active_storage/sfx/946/946-preview.mp3");
+successSound.volume = 0.6; errorSound.volume = 0.5;
+
+document.body.addEventListener('click', () => {
+    successSound.play().then(() => { successSound.pause(); successSound.currentTime = 0; }).catch(()=>{});
+    errorSound.play().then(() => { errorSound.pause(); errorSound.currentTime = 0; }).catch(()=>{});
+}, { once: true });
+
+const toastEl = document.getElementById('toast');
+let toastTimeout;
+
+function toast(msg, type = "info") {
+    toastEl.textContent = msg; 
+    toastEl.className = ''; 
+    void toastEl.offsetWidth; 
+    
+    if (type === "error") {
+        toastEl.classList.add("toast-error", "shake-error");
+        errorSound.currentTime = 0; errorSound.play().catch(()=>{});
+    } else if (type === "success") {
+        toastEl.classList.add("toast-success");
+        successSound.currentTime = 0; successSound.play().catch(()=>{});
+    }
+
+    toastEl.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { toastEl.classList.remove('show'); }, 3500);
+}
+
+// 🌍 MASSIVE MULTI-LINGUAL PROFANITY LIST
+const LOCAL_BAD_WORDS = [
+    "abuse", "idiot", "stupid", "kill", "hate", "die", "scam", "ugly", "dumb", "trash", "fraud", "racist", "sex", "nude", "bitch", "fuck", "shit", "cunt", "whore", "slut", "faggot", "retard", "dick", "pussy",
+    "madarchod", "bhenchod", "chutiya", "bhosdike", "randi", "saale", "kutta", "kamine", "harami", "gandu", "raand", "maatherchod", "maakichuut", "loude",
+    "puta", "mierda", "cabron", "pendejo", "joder", "maricon", "gilipollas", "coño",
+    "merde", "putain", "salope", "connard", "connasse", "encule", "PD",
+    "scheisse", "arschloch", "schlampe", "hurensohn", "fick",
+    "cyka", "blyat", "pizdec", "pidaras", "xuy", "gandon",
+    "porra", "caralho", "filho da puta", "merda", "bosta",
+    "sharmoota", "kus", "sharmout", "kalb"
+];
+
+async function checkProfanity(text) {
+    const lowerText = text.toLowerCase();
+    for (const word of LOCAL_BAD_WORDS) {
+        if (lowerText.includes(word)) return true;
+    }
+    try {
+        const response = await fetch(`https://www.purgomalum.com/service/containsprofanity?text=${encodeURIComponent(text)}`);
+        const result = await response.text();
+        if (result === 'true') return true;
+    } catch (e) {
+        console.warn("Cloud profanity check unavailable.");
+    }
+    return false;
+}
+
+const params = new URLSearchParams(location.search);
+const reqId = params.get("req");
+const role = params.get("role");
+
+let pc, localStream, remoteStream, uid;
+let cam=true, mic=true, rating=0;
+let isScreenSharing = false; 
+
+// DEEPGRAM VARIABLES
+const DEEPGRAM_API_KEY = "67656607d974b8f22c627ab9b1c8b987e3503ac2";
+let deepgramSocket = null;
+let mediaRecorder = null;
+
+// NSFW NUDITY VARIABLES
+let nsfwModel = null;
+let nsfwStrikes = 0;
+const MAX_STRIKES = 3;
+
+const statusEl = document.getElementById("statusOverlay");
+const remoteVideoEl = document.getElementById("remoteVideo");
+const localVideoEl = document.getElementById("localVideo");
+const subtitlesEl = document.getElementById("subtitles");
+const remoteAvatar = document.getElementById("remoteAvatar");
+const nsfwWarningEl = document.getElementById("nsfwWarning");
+const banOverlay = document.getElementById("banOverlay");
+const banReasonText = document.getElementById("banReasonText");
+
+const servers = {
+  iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }]
+};
+
+onAuthStateChanged(auth, async user => {
+  if(!user) return location.href="login.html";
+  uid = user.uid;
+  if(!reqId) return location.href="dashboard.html";
+  await startCall();
+});
+
+async function triggerAutoBan(violationText, type) {
+    if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    if(deepgramSocket) deepgramSocket.close();
+    if(localStream) localStream.getTracks().forEach(t => t.stop());
+    if(pc) pc.close();
+
+    try {
+        await addDoc(collection(db, 'moderation_logs'), {
+            userId: uid, userName: auth.currentUser.displayName || "Unknown",
+            originalText: violationText, violationType: type,
+            sessionId: reqId, timestamp: serverTimestamp()
+        });
+        await updateDoc(doc(db, 'users', uid), {
+            isBanned: true,
+            banReason: `Automated Ban: ${type === 'video_nudity' ? 'Nudity/Pornography detected on camera/screen' : 'Profanity detected'}.`
+        });
+    } catch(e) { console.error(e); }
+
+    if (type === 'video_nudity') {
+        banReasonText.textContent = "You received 3 strikes for showing inappropriate/NSFW visual content. Your account has been permanently banned.";
+    } else {
+        banReasonText.textContent = "You have been banned for profanity/harassment. Your session has been terminated.";
+    }
+    
+    errorSound.play().catch(()=>{});
+    banOverlay.style.display = "flex";
+}
+
+// 👁️ NSFW AI NUDITY DETECTION
+async function startNudityMonitoring() {
+    try {
+        console.log("Loading local NSFW Vision AI...");
+        nsfwModel = await window.nsfwjs.load('/model/');
+        console.log("Local NSFW Vision AI active.");
+        
+        const hiddenCanvas = document.createElement('canvas');
+        hiddenCanvas.width = 224; hiddenCanvas.height = 224;
+        const ctx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
+        
+        async function scanFrame() {
+            try {
+                if (nsfwModel && (cam || isScreenSharing) && !localVideoEl.paused && localVideoEl.readyState === 4) {
+                    ctx.drawImage(localVideoEl, 0, 0, 224, 224);
+                    const predictions = await nsfwModel.classify(hiddenCanvas);
+                    
+                    let nsfwScore = 0;
+                    for (let p of predictions) {
+                        if (p.className === 'Porn' || p.className === 'Hentai' || p.className === 'Sexy') {
+                            nsfwScore += p.probability;
+                        }
+                    }
+
+                    if (nsfwScore > 0.45) {
+                        nsfwStrikes++;
+                        errorSound.play().catch(()=>{});
+                        
+                        if (nsfwStrikes >= MAX_STRIKES) {
+                            nsfwWarningEl.style.display = "none";
+                            await triggerAutoBan("Visual Nudity/Pornography detected on camera or screen share", "video_nudity");
+                            return; 
+                        } else {
+                            nsfwWarningEl.innerText = `⚠️ Inappropriate visual content detected! Please cover up/close immediately. (Strike ${nsfwStrikes}/${MAX_STRIKES})`;
+                            nsfwWarningEl.style.display = "block";
+                            setTimeout(() => { nsfwWarningEl.style.display = "none"; }, 4000);
+                        }
+                    }
+                }
+            } catch(err) { console.error("NSFW Frame Scan Error:", err); }
+            setTimeout(scanFrame, 3000);
+        }
+        scanFrame();
+    } catch (e) {
+        console.warn("⚠️ Failed to load local NSFW Model. Ensure files are inside /model/.", e);
+    }
+}
+
+// 🚀 DEEPGRAM AI INTEGRATION WITH HYBRID FILTER
+function startDeepgramMonitoring(stream) {
+    deepgramSocket = new WebSocket('wss://api.deepgram.com/v1/listen?model=nova-2&smart_format=true', [ 'token', DEEPGRAM_API_KEY ]);
+
+    deepgramSocket.onopen = () => {
+        subtitlesEl.style.display = 'block';
+        subtitlesEl.textContent = "Deepgram AI Active";
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.addEventListener('dataavailable', event => {
+            if (event.data.size > 0 && deepgramSocket.readyState === 1) deepgramSocket.send(event.data);
+        });
+        mediaRecorder.start(250);
+    };
+
+    deepgramSocket.onmessage = async (message) => {
+        const received = JSON.parse(message.data);
+        const transcript = received.channel?.alternatives[0]?.transcript;
+        
+        if (transcript && received.is_final) {
+            subtitlesEl.textContent = " " + transcript;
+            
+            const isViolation = await checkProfanity(transcript);
+            if (isViolation) {
+                subtitlesEl.style.color = "#ef4444";
+                subtitlesEl.textContent = " BAD WORD DETECTED!";
+                await triggerAutoBan(transcript, 'voice');
+            }
+        }
+    };
+    
+    deepgramSocket.onerror = () => { subtitlesEl.textContent = "Subtitle Error: Reconnecting..."; }
+}
+
+// 📹 WEBRTC ENGINE (WITH QUEUE FIX)
+async function startCall() {
+  try {
+    const callMode = params.get("mode") || "video";
+    const useVideo = callMode === "video";
+
+    localStream = await navigator.mediaDevices.getUserMedia({ video: useVideo, audio: true });
+    localVideoEl.srcObject = localStream;
+
+    startDeepgramMonitoring(localStream);
+    startNudityMonitoring();
+
+    pc = new RTCPeerConnection(servers);
+    remoteStream = new MediaStream();
+    remoteVideoEl.srcObject = remoteStream;
+
+    const mediaRef = doc(db, "calls", reqId, "mediaStatus", uid);
+    await setDoc(mediaRef, { cam: useVideo, mic: true }); 
+
+    onSnapshot(collection(db, "calls", reqId, "mediaStatus"), snap => {
+      snap.forEach(d => {
+        if(d.id !== uid) {
+          const m = d.data();
+          remoteAvatar.style.display = m.cam === false ? "flex" : "none";
+        }
+      });
+    });
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.ontrack = event => {
+      event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+      remoteVideoEl.srcObject = null;
+      remoteVideoEl.srcObject = remoteStream;
+      statusEl.style.display = "none";
+    };
+
+    const callDoc = doc(db, "calls", reqId);
+    const offerCandidates = collection(callDoc, "offerCandidates");
+    const answerCandidates = collection(callDoc, "answerCandidates");
+
+    pc.onicecandidate = event => {
+      if(event.candidate) {
+        addDoc(role === "caller" ? offerCandidates : answerCandidates, event.candidate.toJSON());
+      }
+    };
+
+    // QUEUE FIX FOR STABILITY
+    let iceCandidateQueue = [];
+
+    if (role === "caller") {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await setDoc(callDoc, { offer: { type: offer.type, sdp: offer.sdp } });
+
+      onSnapshot(callDoc, async snapshot => {
+        const data = snapshot.data();
+        if(!pc.currentRemoteDescription && data?.answer) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          
+          iceCandidateQueue.forEach(async c => await pc.addIceCandidate(c).catch(console.error));
+          iceCandidateQueue = [];
+          
+          onSnapshot(answerCandidates, snap => {
+            snap.docChanges().forEach(change => {
+              if(change.type === "added") {
+                  const c = new RTCIceCandidate(change.doc.data());
+                  if (pc.remoteDescription) pc.addIceCandidate(c);
+                  else iceCandidateQueue.push(c);
+              }
+            });
+          });
+        }
+      });
+    } else {
+      onSnapshot(callDoc, async snapshot => {
+        const data = snapshot.data();
+        if(!pc.currentRemoteDescription && data?.offer) {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          await updateDoc(callDoc, { answer: { type: answer.type, sdp: answer.sdp } });
+
+          iceCandidateQueue.forEach(async c => await pc.addIceCandidate(c).catch(console.error));
+          iceCandidateQueue = [];
+
+          onSnapshot(offerCandidates, snap => {
+            snap.docChanges().forEach(change => {
+              if(change.type === "added") {
+                  const c = new RTCIceCandidate(change.doc.data());
+                  if (pc.remoteDescription) pc.addIceCandidate(c);
+                  else iceCandidateQueue.push(c);
+              }
+            });
+          });
+        }
+      });
+    }
+
+    setupChat(callDoc);
+
+  } catch (err) {
+    statusEl.textContent = "Camera/Mic Blocked or Unavailable.";
+    toast("Camera/Microphone access denied.", "error");
+    console.error(err);
+  }
+}
+
+// 💬 CHAT SYSTEM
+function setupChat(callDoc) {
+  const msgCol = collection(callDoc, "messages");
+  onSnapshot(query(msgCol, orderBy("timestamp")), snap => {
+    const div = document.getElementById("msgs");
+    div.innerHTML = "";
+    snap.forEach(d => {
+      const m = d.data();
+      const el = document.createElement("div");
+      el.className = `msg ${m.uid === uid ? "me" : "them"}`;
+      el.textContent = m.text;
+      div.appendChild(el);
+    });
+    div.scrollTop = div.scrollHeight;
+  });
+
+  const send = async () => {
+    const t = document.getElementById("txt");
+    const text = t.value.trim();
+    if(text) {
+      const isViolation = await checkProfanity(text);
+      if (isViolation) {
+          await triggerAutoBan(text, 'chat');
+          return; 
+      }
+      addDoc(msgCol, { text: text, uid: uid, timestamp: serverTimestamp() });
+      t.value = "";
+    }
+  };
+  document.getElementById("send").onclick = send;
+  document.getElementById("txt").onkeypress = (e) => { if(e.key==="Enter") send(); };
+}
+
+// 🎛️ CONTROLS
+document.getElementById("micBtn").onclick = async (e) => {
+  mic = !mic;
+  if(localStream && localStream.getAudioTracks().length > 0) {
+      localStream.getAudioTracks()[0].enabled = mic;
+  }
+  e.target.classList.toggle("off", !mic);
+  
+  if (mediaRecorder) {
+      if (mic) { 
+          mediaRecorder.resume(); 
+          subtitlesEl.style.display = 'block';
+      } else { 
+          mediaRecorder.pause(); 
+          subtitlesEl.style.display = 'none'; 
+      }
+  }
+  await updateDoc(doc(db, "calls", reqId, "mediaStatus", uid), { mic: mic });
+};
+
+document.getElementById("camBtn").onclick = async (e) => {
+  cam = !cam;
+  if(localStream && localStream.getVideoTracks().length > 0) {
+      localStream.getVideoTracks()[0].enabled = cam;
+  }
+  e.target.classList.toggle("off", !cam);
+  await updateDoc(doc(db, "calls", reqId, "mediaStatus", uid), { cam: cam });
+};
+
+// SCREEN SHARE 
+document.getElementById("shareBtn").onclick = async (e) => {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        toast("Screen sharing is not supported on this device/browser.", "error");
+        return;
+    }
+    const btn = e.target.closest("button");
+    const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+    const screenTrack = displayStream.getVideoTracks()[0];
+    
+    const sender = pc.getSenders().find(s => s.track.kind === "video");
+    sender.replaceTrack(screenTrack);
+    btn.classList.add("active-share");
+
+    isScreenSharing = true;
+    localVideoEl.srcObject = new MediaStream([screenTrack]);
+    localVideoEl.play(); 
+
+    screenTrack.onended = () => {
+      sender.replaceTrack(localStream.getVideoTracks()[0]); 
+      btn.classList.remove("active-share");
+      isScreenSharing = false;
+      localVideoEl.srcObject = localStream; 
+    };
+  } catch(err) { console.error("Screen Share Error:", err); }
+};
+
+// ❌ END SESSION
+document.getElementById("endBtn").onclick = () => {
+  document.getElementById("ratingModal").style.display = "flex";
+};
+
+document.querySelectorAll(".star").forEach(s => {
+  s.onclick = function() {
+    rating = this.dataset.v;
+    document.querySelectorAll(".star").forEach(st => st.classList.toggle("active", st.dataset.v <= rating));
+  };
+});
+
+document.getElementById("submitBtn").onclick = async function() {
+  if(!rating) return toast("Please select a star rating first!", "error");
+  this.innerText = "Ending...";
+  this.disabled = true;
+
+  if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  if(deepgramSocket) deepgramSocket.close();
+  if(localStream) localStream.getTracks().forEach(t => t.stop());
+  if(pc) pc.close();
+
+  try {
+    // Delete the call document to stop WebRTC signaling
+    await deleteDoc(doc(db, "calls", reqId));
+    
+    // Instead of querying by creatorId, directly try to delete the request document using reqId
+    if (reqId) {
+        await deleteDoc(doc(db, "requests", reqId)).catch(() => console.log("Request doc already deleted or not found"));
+    }
+  } catch (err) { console.error("Cleanup error:", err); }
+
+  window.location.href = "dashboard.html";
+};
+
+// --- NETWORK LISTENERS ---
+window.addEventListener('offline', () => toast("Connection Lost: Video may freeze.", "error"));
+window.addEventListener('online', () => toast("Back Online: Connection restored.", "success"));
+</script>
+</body>
+</html>
